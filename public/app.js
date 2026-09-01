@@ -812,6 +812,63 @@ $('#nextRound').addEventListener('click',()=>{
     if(!res?.ok){ btn.disabled=false; showSystemMessage(res.error||'Nu s-a putut continua jocul.','Nu se poate continua'); }
   });
 });
+
+function renderGlobalRanking(data){
+  const loading=$('#rankingLoading');
+  const empty=$('#rankingEmpty');
+  const list=$('#globalRanking');
+  if(loading) loading.classList.add('d-none');
+  if($('#rankingTotalUsers')) $('#rankingTotalUsers').textContent=formatStat(data?.totalUsers||0);
+
+  const players=Array.isArray(data?.players)?data.players:[];
+  if(!players.length){
+    empty?.classList.remove('d-none');
+    list?.classList.add('d-none');
+    if(list) list.innerHTML='';
+    return;
+  }
+
+  empty?.classList.add('d-none');
+  list?.classList.remove('d-none');
+  if(list){
+    list.innerHTML=players.map(p=>{
+      const medal=p.rank===1?'fa-trophy':p.rank===2?'fa-medal':p.rank===3?'fa-award':'';
+      const icon=p.icon?`<i class="${esc(p.icon)}"></i>`:'<i class="fa-solid fa-user"></i>';
+      return `<div class="global-ranking-row ${p.rank<=3?'top-rank top-rank-'+p.rank:''}">
+        <div class="global-ranking-position">${medal?`<i class="fa-solid ${medal}"></i>`:`#${p.rank}`}</div>
+        <div class="global-ranking-avatar">${icon}</div>
+        <div class="global-ranking-player">
+          <strong>${esc(p.username)}</strong>
+          <small>${formatStat(p.gamesPlayed)} jocuri · ${formatStat(p.wins)} victorii</small>
+        </div>
+        <div class="global-ranking-stat">
+          <small>HIGHSCORE</small>
+          <strong>${formatStat(p.bestScore)}</strong>
+        </div>
+        <div class="global-ranking-stat total-score">
+          <small>TOTAL</small>
+          <strong>${formatStat(p.totalScore)}</strong>
+        </div>
+      </div>`;
+    }).join('');
+  }
+}
+
+function loadGlobalRanking(){
+  $('#rankingLoading')?.classList.remove('d-none');
+  $('#rankingEmpty')?.classList.add('d-none');
+  $('#globalRanking')?.classList.add('d-none');
+  socket.emit('ranking:get',res=>{
+    if(!res?.ok){
+      if($('#rankingLoading')) $('#rankingLoading').innerHTML='<span>Clasamentul nu a putut fi încărcat.</span>';
+      return;
+    }
+    renderGlobalRanking(res);
+  });
+}
+
+$('#rankingModal')?.addEventListener('show.bs.modal',loadGlobalRanking);
+
 function renderScoreboard(el,players){
   const sorted=[...players].sort((a,b)=>b.score-a.score);
   el.innerHTML=sorted.map((p,i)=>`<div class="score-row"><div class="d-flex align-items-center gap-2"><span class="rank">#${i+1}</span><strong class="player-name-line">${playerNameHtml(p)}</strong></div><span>${p.score} pct</span></div>`).join('');

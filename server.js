@@ -77,6 +77,23 @@ function publicUser(user){
   };
 }
 
+function rankingPayload(){
+  const sorted=users
+    .map(publicUser)
+    .sort((a,b)=>
+      b.bestScore-a.bestScore ||
+      b.wins-a.wins ||
+      b.totalScore-a.totalScore ||
+      b.gamesPlayed-a.gamesPlayed ||
+      a.username.localeCompare(b.username,'ro',{sensitivity:'variant'})
+    );
+
+  return {
+    totalUsers:sorted.length,
+    players:sorted.slice(0,100).map((u,index)=>({...u,rank:index+1}))
+  };
+}
+
 function validateUsername(username){
   if(username.length<3 || username.length>20) return 'Username-ul trebuie să aibă între 3 și 20 de caractere.';
   if(!/^\p{L}[\p{L}\p{N}_]*$/u.test(username)) return 'Folosește doar litere, cifre și underscore; primul caracter trebuie să fie literă.';
@@ -430,6 +447,11 @@ io.on('connection', socket => {
   broadcastStats();
 
   socket.on('rooms:list', () => socket.emit('rooms:public', publicRooms()));
+
+  socket.on('ranking:get', (ack = () => {}) => {
+    ack({ok:true,...rankingPayload()});
+  });
+
 
   socket.on('auth:restore', (token, ack = () => {}) => {
     const user=attachSession(socket,token);

@@ -9,6 +9,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Permanent+Marker&family=Barlow+Condensed:wght@500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
+  <link rel="icon" type="image/png" href="/assets/favicon.png">
   <link rel="stylesheet" href="/styles.css" />
 </head>
 <body>
@@ -366,10 +367,27 @@
   </div>
 
   <div class="modal fade" id="rankingModal" tabindex="-1">
-    <div class="modal-dialog modal-dialog-centered"><div class="modal-content retro-info-modal">
-      <div class="modal-header modal-header-branded"><div><img src="/assets/tomapan-logo-transparent.png" alt="Țomapan Multiplayer" class="modal-brand-logo"><div class="eyebrow">Hall of fame</div><h5 class="modal-title">Clasament</h5></div><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div>
+    <div class="modal-dialog modal-dialog-centered modal-lg"><div class="modal-content retro-info-modal ranking-modal-card">
+      <div class="modal-header modal-header-branded">
+        <div><img src="/assets/tomapan-logo-transparent.png" alt="Țomapan Multiplayer" class="modal-brand-logo"><div class="eyebrow">Hall of fame</div><h5 class="modal-title">Clasament global</h5></div>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
       <div class="modal-body">
-        <p class="text-secondary mb-0">Clasamentul global va folosi istoricul meciurilor când adăugăm baza de date. Clasamentul fiecărui joc este deja disponibil după fiecare rundă.</p>
+        <div class="ranking-summary mb-3">
+          <div><small>JUCĂTORI ÎNREGISTRAȚI</small><strong id="rankingTotalUsers">0</strong></div>
+          <div><small>ORDONARE</small><strong>HIGHSCORE</strong></div>
+        </div>
+        <div id="rankingLoading" class="ranking-loading">
+          <i class="fa-solid fa-spinner fa-spin"></i>
+          <span>Se încarcă clasamentul...</span>
+        </div>
+        <div id="rankingEmpty" class="ranking-empty d-none">
+          <i class="fa-solid fa-trophy"></i>
+          <strong>Clasamentul e încă gol</strong>
+          <span>Primul joc terminat de un utilizator va apărea aici.</span>
+        </div>
+        <div id="globalRanking" class="global-ranking d-none"></div>
+        <div class="ranking-note mt-3">Clasamentul este ordonat după highscore. La egalitate contează victoriile, apoi punctele totale.</div>
       </div>
     </div></div>
   </div>
