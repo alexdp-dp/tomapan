@@ -50,7 +50,7 @@
         </section>
 
         <div class="home-dashboard row g-4 align-items-stretch">
-          <div class="col-xl-3 col-md-6">
+          <div class="col-xl-4 col-md-6">
             <section class="action-panel action-panel-hot h-100">
               <div class="action-heading">
                 <span class="feature-icon hot"><i class="fa-solid fa-user-group" aria-hidden="true"></i></span>
@@ -63,7 +63,7 @@
             </section>
           </div>
 
-          <div class="col-xl-3 col-md-6">
+          <div class="col-xl-4 col-md-6">
             <section class="action-panel action-panel-cold h-100">
               <div class="action-heading">
                 <span class="feature-icon cold"><i class="fa-solid fa-square-plus" aria-hidden="true"></i></span>
@@ -76,7 +76,20 @@
             </section>
           </div>
 
-          <div class="col-xl-6">
+          <div class="col-xl-4 col-md-12">
+            <section class="action-panel action-panel-code h-100">
+              <div class="action-heading">
+                <span class="feature-icon code"><i class="fa-solid fa-key"></i></span>
+                <h2>INTRĂ CU COD</h2>
+              </div>
+              <p>Ai primit o invitație? Introdu codul camerei private și intră direct la prieteni.</p>
+              <button id="joinByCode" class="retro-action-btn code" type="button" data-bs-toggle="modal" data-bs-target="#joinModal">
+                <i class="fa-solid fa-right-to-bracket"></i> INTRODU CODUL
+              </button>
+            </section>
+          </div>
+
+          <div class="col-12">
             <section class="public-panel-main h-100">
               <div class="public-panel-head">
                 <div class="action-heading mb-0">
@@ -95,7 +108,7 @@
 
         <div class="home-footer">
           <img src="/assets/tomapan-logo-transparent.png" alt="Țomapan Multiplayer" class="footer-logo">
-          <span class="footer-copy">© 2026 ȚOMAPAN MULTIPLAYER. Alex Darie.</span>
+          <span class="footer-copy">© 2026 ȚOMAPAN MULTIPLAYER. Toate drepturile rezervate.</span>
         </div>
       </div>
     </section>
@@ -107,9 +120,10 @@
           <h1 id="roomName" class="h2 mb-0"></h1>
         </div>
         <div class="d-flex flex-wrap align-items-center gap-2">
-          <div class="code-box">
-            <small>COD INVITAȚIE</small>
-            <strong id="roomCode"></strong>
+          <div class="invite-tools">
+            <div class="code-box"><small>COD INVITAȚIE</small><strong id="roomCode"></strong></div>
+            <button id="copyRoomCode" type="button" class="btn btn-outline-light invite-btn"><i class="fa-regular fa-copy"></i><span>Copiază cod</span></button>
+            <button id="shareRoom" type="button" class="btn btn-primary invite-btn"><i class="fa-solid fa-share-nodes"></i><span>Invită prieteni</span></button>
           </div>
           <button id="leaveRoom" type="button" class="btn btn-outline-light room-leave-btn">← Ieși din cameră</button>
         </div>
@@ -291,7 +305,7 @@
         <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
       </div>
       <div class="modal-body">
-        <p class="text-secondary">Alex Darie - Work in progress</p>
+        <p class="text-secondary">Lorem ipsum dolor sit amet, consectetur adipiscing elit. Integer posuere, nisl sed tincidunt luctus, arcu neque suscipit lorem, sed luctus massa justo vitae lorem.</p>
         <p class="text-secondary mb-0">Praesent commodo, sem at tempor consequat, tortor nisl feugiat lacus, vitae feugiat mauris neque sed erat. Donec vitae libero vel justo faucibus gravida.</p>
       </div>
     </div></div>

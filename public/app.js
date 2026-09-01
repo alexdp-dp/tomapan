@@ -12,6 +12,23 @@ const roomView = $('#roomView');
 function showRoom(){ homeView.classList.remove('active'); roomView.classList.add('active'); document.body.classList.add('game-active'); }
 function showHome(){ homeView.classList.add('active'); roomView.classList.remove('active'); document.body.classList.remove('game-active'); }
 function initials(name){ return name.trim().slice(0,2).toUpperCase(); }
+const CATEGORY_ICONS={tara:'fa-solid fa-flag',oras:'fa-solid fa-city',munte:'fa-solid fa-mountain-sun',apa:'fa-solid fa-water',planta:'fa-solid fa-seedling',animal:'fa-solid fa-paw',nume:'fa-solid fa-user'};
+
+function roomInviteUrl(code){
+  const url=new URL(window.location.href); url.search=''; url.hash=''; url.searchParams.set('room',code); return url.toString();
+}
+async function copyText(text){
+  if(navigator.clipboard && window.isSecureContext){ await navigator.clipboard.writeText(text); return true; }
+  const ta=document.createElement('textarea'); ta.value=text; ta.style.position='fixed'; ta.style.opacity='0';
+  document.body.appendChild(ta); ta.select(); const ok=document.execCommand('copy'); ta.remove(); return ok;
+}
+function openInviteFromUrl(){
+  const code=(new URLSearchParams(window.location.search).get('room')||'').trim().toUpperCase();
+  if(!code) return;
+  $('#joinForm [name=code]').value=code;
+  bootstrap.Modal.getOrCreateInstance($('#joinModal')).show();
+  setTimeout(()=>$('#joinForm [name=nickname]')?.focus(),250);
+}
 function esc(s=''){ return s.replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c])); }
 
 
@@ -418,8 +435,22 @@ $('#joinForm').addEventListener('submit',e=>{
   const fd=new FormData(e.currentTarget);
   socket.emit('room:join',{nickname:fd.get('nickname'),code:fd.get('code')},res=>{
     if(!res.ok){ setFormFeedback('#joinError',res.error); return; }
-    bootstrap.Modal.getOrCreateInstance($('#joinModal')).hide(); showRoom();
+    bootstrap.Modal.getOrCreateInstance($('#joinModal')).hide(); history.replaceState({},'',window.location.pathname); showRoom();
   });
+});
+
+$('#copyRoomCode')?.addEventListener('click',async()=>{
+  if(!currentRoom?.code) return;
+  try{ await copyText(currentRoom.code); const s=$('#copyRoomCode span'),o=s.textContent;s.textContent='Copiat!';setTimeout(()=>s.textContent=o,1400); }
+  catch{ showSystemMessage('Nu am putut copia automat codul.','Copiere eșuată','!'); }
+});
+$('#shareRoom')?.addEventListener('click',async()=>{
+  if(!currentRoom?.code) return;
+  const url=roomInviteUrl(currentRoom.code);
+  const data={title:`ȚOMAPAN – ${currentRoom.name}`,text:`Intră în camera mea de ȚOMAPAN. Cod: ${currentRoom.code}`,url};
+  if(navigator.share){ try{await navigator.share(data);return;}catch(e){if(e?.name==='AbortError')return;} }
+  try{await copyText(url);const s=$('#shareRoom span'),o=s.textContent;s.textContent='Link copiat!';setTimeout(()=>s.textContent=o,1600);}
+  catch{showSystemMessage(`Codul camerei este ${currentRoom.code}.`,'Invitație','↗');}
 });
 
 socket.on('room:update', room=>{ currentRoom=room; showRoom(); renderRoom(room); });
@@ -486,7 +517,7 @@ function renderGame(room){
   if(form.dataset.round!=String(room.currentRound)){
     form.dataset.round=room.currentRound;
     lastAnswers={};
-    form.innerHTML=room.categories.map(c=>`<div class="col-md-6 col-lg-4"><div class="answer-card"><label class="form-label">${esc(c.label)}</label><input class="form-control answer-input" data-key="${c.key}" autocomplete="off" placeholder="${room.letter}..."></div></div>`).join('');
+    form.innerHTML=room.categories.map(c=>`<div class="col-md-6 col-lg-4"><div class="answer-card"><label class="form-label answer-label"><span class="answer-category-icon"><i class="${CATEGORY_ICONS[c.key]||'fa-solid fa-pen'}"></i></span><span>${esc(c.label)}</span></label><input class="form-control answer-input" data-key="${c.key}" autocomplete="off" placeholder="${room.letter}..."></div></div>`).join('');
     document.querySelectorAll('.answer-input').forEach(inp=>inp.addEventListener('input',sendAnswers));
     document.querySelector('.answer-input')?.focus();
   }
@@ -552,3 +583,5 @@ function renderFinished(room){ clearInterval(countdownInterval); clearInterval(r
 $('#leaveRoom')?.addEventListener('click',requestLeaveRoom);
 $('#leaveRoomFinished')?.addEventListener('click',requestLeaveRoom);
 $('#confirmLeaveRoom')?.addEventListener('click',leaveRoom);
+
+window.addEventListener('DOMContentLoaded',()=>setTimeout(openInviteFromUrl,80));

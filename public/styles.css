@@ -1199,3 +1199,13 @@ body.game-active #roomView::before{
 @media(max-width:390px){
   .retro-logo img{width:160px}
 }
+
+/* v15 */
+.action-panel-code{border-color:rgba(255,208,72,.34)}
+.feature-icon.code{color:#ffe16a;border-color:rgba(255,225,106,.4)}
+.retro-action-btn.code{background:linear-gradient(135deg,#ffbf36,#ff6f4f);color:#16091b;border:0}
+.invite-tools{display:flex;flex-wrap:wrap;align-items:stretch;gap:8px}
+.invite-btn{display:flex;align-items:center;justify-content:center;gap:8px;white-space:nowrap}
+.answer-label{display:flex!important;align-items:center;gap:9px;margin-bottom:10px}
+.answer-category-icon{width:28px;height:28px;display:grid;place-items:center;flex:0 0 28px;border-radius:9px;color:#30e5ff;background:rgba(28,214,255,.09);border:1px solid rgba(48,229,255,.2);font-size:.82rem;text-shadow:0 0 10px rgba(48,229,255,.55)}
+@media(max-width:767px){.invite-tools{width:100%}.invite-tools .code-box{flex:1 1 100%}.invite-btn{flex:1 1 calc(50% - 4px)}}
