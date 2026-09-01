@@ -5,6 +5,14 @@ let lastAnswers = {};
 let drawAnimationFrame = null;
 let resultsCountdownInterval = null;
 
+let currentUser = null;
+const ACCOUNT_ICONS=[
+  'fa-solid fa-crown','fa-solid fa-gamepad','fa-solid fa-bolt','fa-solid fa-fire',
+  'fa-solid fa-star','fa-solid fa-rocket','fa-solid fa-trophy','fa-solid fa-ghost',
+  'fa-solid fa-dragon','fa-solid fa-skull','fa-solid fa-chess-knight','fa-solid fa-paw',
+  'fa-solid fa-meteor','fa-solid fa-dice','fa-solid fa-wand-magic-sparkles','fa-solid fa-shield-halved'
+];
+
 const $ = s => document.querySelector(s);
 const formatStat=n=>new Intl.NumberFormat('ro-RO').format(Number(n)||0);
 socket.on('stats:update',stats=>{
@@ -51,6 +59,173 @@ function openInviteFromUrl(){
   setTimeout(()=>$('#joinForm [name=nickname]')?.focus(),250);
 }
 function esc(s=''){ return s.replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c])); }
+
+function playerNameHtml(player){
+  const icon=player?.icon ? `<i class="${esc(player.icon)} player-name-icon"></i>` : '';
+  return `${icon}<span>${esc(player?.nickname||'')}</span>`;
+}
+
+function setAccountError(selector,message){
+  const el=$(selector);
+  if(!el) return;
+  el.textContent=message||'';
+  el.classList.toggle('d-none',!message);
+}
+
+function closeAccountDropdown(){
+  const dd=$('#accountDropdown');
+  const btn=$('#accountButton');
+  if(dd) dd.hidden=true;
+  if(btn) btn.setAttribute('aria-expanded','false');
+}
+
+function showAccountChoice(){
+  $('#accountChoice')?.classList.remove('d-none');
+  $('#loginAccountForm')?.classList.add('d-none');
+  $('#registerAccountForm')?.classList.add('d-none');
+  setAccountError('#loginAccountError','');
+  setAccountError('#registerAccountError','');
+}
+
+function syncNicknameFields(){
+  document.querySelectorAll('#createForm [name=nickname],#joinForm [name=nickname]').forEach(input=>{
+    if(currentUser){
+      input.value=currentUser.username;
+      input.readOnly=true;
+      input.title='Se folosește username-ul contului autentificat.';
+    }else{
+      input.readOnly=false;
+      input.title='';
+    }
+  });
+}
+
+function renderAccount(){
+  const guestView=$('#accountGuestView');
+  const userView=$('#accountUserView');
+  const btnName=$('#accountButtonName');
+  const btnIcon=$('#accountButtonIcon');
+  if(currentUser){
+    guestView?.classList.add('d-none');
+    userView?.classList.remove('d-none');
+    if(btnName) btnName.textContent=currentUser.username;
+    if(btnIcon) btnIcon.innerHTML=`<i class="${esc(currentUser.icon)}"></i>`;
+    $('#accountProfileName').textContent=currentUser.username;
+    $('#accountProfileIcon').innerHTML=`<i class="${esc(currentUser.icon)}"></i>`;
+    $('#profileBestScore').textContent=formatStat(currentUser.bestScore);
+    $('#profileWins').textContent=formatStat(currentUser.wins);
+    $('#profileGames').textContent=formatStat(currentUser.gamesPlayed);
+    $('#profileTotalScore').textContent=formatStat(currentUser.totalScore);
+  }else{
+    guestView?.classList.remove('d-none');
+    userView?.classList.add('d-none');
+    if(btnName) btnName.textContent='Guest';
+    if(btnIcon) btnIcon.innerHTML='<i class="fa-solid fa-user"></i>';
+    showAccountChoice();
+  }
+  syncNicknameFields();
+}
+
+function saveAuth(token,user){
+  currentUser=user;
+  if(token) localStorage.setItem('tomapanAuthToken',token);
+  renderAccount();
+}
+
+function clearAuth(){
+  currentUser=null;
+  localStorage.removeItem('tomapanAuthToken');
+  renderAccount();
+}
+
+function initAccountUi(){
+  const picker=$('#accountIconPicker');
+  if(picker){
+    picker.innerHTML=ACCOUNT_ICONS.map((icon,i)=>`<button class="account-icon-option ${i===0?'selected':''}" type="button" data-icon="${icon}" aria-label="Iconița ${i+1}"><i class="${icon}"></i></button>`).join('');
+    picker.querySelectorAll('.account-icon-option').forEach(btn=>btn.addEventListener('click',()=>{
+      picker.querySelectorAll('.account-icon-option').forEach(b=>b.classList.remove('selected'));
+      btn.classList.add('selected');
+      $('#registerAccountForm [name=icon]').value=btn.dataset.icon;
+    }));
+  }
+
+  $('#accountButton')?.addEventListener('click',e=>{
+    e.stopPropagation();
+    const dd=$('#accountDropdown');
+    const opening=dd.hidden;
+    dd.hidden=!opening;
+    $('#accountButton').setAttribute('aria-expanded',String(opening));
+  });
+  $('#accountDropdown')?.addEventListener('click',e=>e.stopPropagation());
+  document.addEventListener('click',closeAccountDropdown);
+
+  $('#showLoginForm')?.addEventListener('click',()=>{
+    $('#accountChoice').classList.add('d-none');
+    $('#loginAccountForm').classList.remove('d-none');
+    setTimeout(()=>$('#loginAccountForm [name=username]')?.focus(),20);
+  });
+  $('#showRegisterForm')?.addEventListener('click',()=>{
+    $('#accountChoice').classList.add('d-none');
+    $('#registerAccountForm').classList.remove('d-none');
+    setTimeout(()=>$('#registerAccountForm [name=username]')?.focus(),20);
+  });
+  document.querySelectorAll('[data-account-back]').forEach(btn=>btn.addEventListener('click',showAccountChoice));
+
+  $('#loginAccountForm')?.addEventListener('submit',e=>{
+    e.preventDefault();
+    const fd=new FormData(e.currentTarget);
+    setAccountError('#loginAccountError','');
+    socket.emit('auth:login',{username:fd.get('username'),password:fd.get('password')},res=>{
+      if(!res?.ok) return setAccountError('#loginAccountError',res?.error||'Autentificarea a eșuat.');
+      saveAuth(res.token,res.user);
+      e.currentTarget.reset();
+      closeAccountDropdown();
+    });
+  });
+
+  $('#registerAccountForm')?.addEventListener('submit',e=>{
+    e.preventDefault();
+    const fd=new FormData(e.currentTarget);
+    const username=String(fd.get('username')||'').trim();
+    const password=String(fd.get('password')||'');
+    const confirm=String(fd.get('confirmPassword')||'');
+    if(!/^\p{L}[\p{L}\p{N}_]{2,19}$/u.test(username)) return setAccountError('#registerAccountError','Username invalid: 3–20 caractere, litere/cifre/_, primul caracter literă.');
+    if(password.length<4) return setAccountError('#registerAccountError','Parola trebuie să aibă minimum 4 caractere.');
+    if(password!==confirm) return setAccountError('#registerAccountError','Parolele nu coincid.');
+    setAccountError('#registerAccountError','');
+    socket.emit('auth:register',{username,password,icon:fd.get('icon')},res=>{
+      if(!res?.ok) return setAccountError('#registerAccountError',res?.error||'Nu am putut crea contul.');
+      saveAuth(res.token,res.user);
+      e.currentTarget.reset();
+      const first=picker?.querySelector('.account-icon-option');
+      picker?.querySelectorAll('.account-icon-option').forEach(b=>b.classList.toggle('selected',b===first));
+      if($('#registerAccountForm [name=icon]')) $('#registerAccountForm [name=icon]').value=ACCOUNT_ICONS[0];
+      closeAccountDropdown();
+    });
+  });
+
+  $('#logoutAccount')?.addEventListener('click',()=>{
+    socket.emit('auth:logout',()=>clearAuth());
+  });
+
+  renderAccount();
+}
+
+socket.on('connect',()=>{
+  const token=localStorage.getItem('tomapanAuthToken');
+  if(!token) return;
+  socket.emit('auth:restore',token,res=>{
+    if(res?.ok) saveAuth(token,res.user);
+    else clearAuth();
+  });
+});
+
+socket.on('auth:user',user=>{
+  if(currentUser && user?.username===currentUser.username){
+    currentUser=user;
+    renderAccount();
+  }
+});
 
 
 
@@ -479,7 +654,7 @@ socket.on('room:update', room=>{ currentRoom=room; showRoom(); renderRoom(room);
 function renderRoom(room){
   $('#roomName').textContent=room.name; $('#roomCode').textContent=room.code;
   $('#playerCount').textContent=`${room.players.length}/${room.maxPlayers}`;
-  $('#playersList').innerHTML=room.players.map(p=>`<div class="player-card"><div class="avatar">${esc(initials(p.nickname))}</div><div class="min-w-0"><div class="fw-semibold text-truncate">${esc(p.nickname)} ${p.id===room.hostId?'<span class="badge text-bg-secondary">host</span>':''}</div><div class="small text-secondary">${p.score} puncte</div></div></div>`).join('');
+  $('#playersList').innerHTML=room.players.map(p=>`<div class="player-card"><div class="avatar">${p.icon?`<i class="${esc(p.icon)}"></i>`:esc(initials(p.nickname))}</div><div class="min-w-0"><div class="fw-semibold text-truncate player-name-line">${playerNameHtml(p)} ${p.id===room.hostId?'<span class="badge text-bg-secondary">host</span>':''}</div><div class="small text-secondary">${p.score} puncte</div></div></div>`).join('');
   $('#roomSettings').innerHTML=`<div><span class="text-secondary">Runde</span><strong>${room.rounds}</strong></div><div><span class="text-secondary">Durată</span><strong>${room.duration}s</strong></div><div><span class="text-secondary">Tip cameră</span><strong>${room.isPublic?'Publică':'Privată'}</strong></div>`;
   const amHost = socket.id===room.hostId;
   $('#startGame').classList.toggle('d-none',!amHost);
@@ -610,7 +785,7 @@ function renderResults(room){
     const canVote=a.validationStatus==='unknown' && a.playerId!==socket.id && Boolean(a.value);
     const ownerUnknown=a.validationStatus==='unknown' && a.playerId===socket.id && Boolean(a.value);
     const voteUi=a.validationStatus==='unknown' && a.value ? `<div class="vote-row ${canVote?'vote-attention':''}"><span class="vote-question">${ownerUnknown?'Votul celorlalți:':'E corect?'}</span>${canVote?`<button class="vote-btn yes ${myVote==='yes'?'active':''}" data-vote="yes" data-category="${cat.key}" data-player="${a.playerId}" title="Corect"><i class="fa-solid fa-check"></i></button><button class="vote-btn no ${myVote==='no'?'active':''}" data-vote="no" data-category="${cat.key}" data-player="${a.playerId}" title="Greșit"><i class="fa-solid fa-xmark"></i></button>`:''}<span class="vote-count"><i class="fa-solid fa-check"></i> ${yes} · <i class="fa-solid fa-xmark"></i> ${no}</span></div>`:'';
-    return `<div class="result-answer"><div class="result-answer-head"><span class="small text-secondary">${esc(a.nickname)}</span>${validationIcon(voteStatus)}</div><div class="d-flex justify-content-between gap-2 align-items-center"><span class="text-truncate">${esc(a.value||'—')}</span><span class="points">+${a.points}</span></div>${voteUi}</div>`;
+    return `<div class="result-answer"><div class="result-answer-head"><span class="small text-secondary result-player-name">${a.icon?`<i class="${esc(a.icon)} player-name-icon"></i>`:''}${esc(a.nickname)}</span>${validationIcon(voteStatus)}</div><div class="d-flex justify-content-between gap-2 align-items-center"><span class="text-truncate">${esc(a.value||'—')}</span><span class="points">+${a.points}</span></div>${voteUi}</div>`;
   }).join('')}</div></div>`).join('');
   document.querySelectorAll('.vote-btn').forEach(btn=>btn.addEventListener('click',()=>socket.emit('game:vote',{categoryKey:btn.dataset.category,playerId:btn.dataset.player,vote:btn.dataset.vote})));
   renderScoreboard($('#scoreboard'),room.players);
@@ -639,14 +814,14 @@ $('#nextRound').addEventListener('click',()=>{
 });
 function renderScoreboard(el,players){
   const sorted=[...players].sort((a,b)=>b.score-a.score);
-  el.innerHTML=sorted.map((p,i)=>`<div class="score-row"><div class="d-flex align-items-center gap-2"><span class="rank">#${i+1}</span><strong>${esc(p.nickname)}</strong></div><span>${p.score} pct</span></div>`).join('');
+  el.innerHTML=sorted.map((p,i)=>`<div class="score-row"><div class="d-flex align-items-center gap-2"><span class="rank">#${i+1}</span><strong class="player-name-line">${playerNameHtml(p)}</strong></div><span>${p.score} pct</span></div>`).join('');
 }
 function renderFinished(room){
   clearInterval(countdownInterval);
   clearInterval(resultsCountdownInterval);
   const sorted=[...room.players].sort((a,b)=>b.score-a.score);
   const winner=sorted[0];
-  $('#finalWinnerName').textContent=winner?.nickname||'—';
+  $('#finalWinnerName').innerHTML=winner?playerNameHtml(winner):'—';
   $('#finalWinnerScore').textContent=winner?`${winner.score} puncte`:'';
   renderScoreboard($('#finalScoreboard'),room.players);
 }
@@ -656,3 +831,5 @@ $('#leaveRoomFinished')?.addEventListener('click',requestLeaveRoom);
 $('#confirmLeaveRoom')?.addEventListener('click',leaveRoom);
 
 window.addEventListener('DOMContentLoaded',()=>setTimeout(openInviteFromUrl,80));
+
+initAccountUi();

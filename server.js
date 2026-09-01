@@ -17,6 +17,113 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 const rooms = new Map();
 
+const USERS_FILE = path.join(__dirname, 'data', 'users.json');
+const sessions = new Map();
+const USER_ICONS = new Set([
+  'fa-solid fa-crown','fa-solid fa-gamepad','fa-solid fa-bolt','fa-solid fa-fire',
+  'fa-solid fa-star','fa-solid fa-rocket','fa-solid fa-trophy','fa-solid fa-ghost',
+  'fa-solid fa-dragon','fa-solid fa-skull','fa-solid fa-chess-knight','fa-solid fa-paw',
+  'fa-solid fa-meteor','fa-solid fa-dice','fa-solid fa-wand-magic-sparkles','fa-solid fa-shield-halved'
+]);
+
+
+function hashPassword(password){
+  const salt=crypto.randomBytes(16).toString('hex');
+  const hash=crypto.scryptSync(password,salt,64).toString('hex');
+  return `${salt}:${hash}`;
+}
+
+function verifyPassword(password,stored){
+  try{
+    const [salt,hashHex]=String(stored||'').split(':');
+    if(!salt || !hashHex) return false;
+    const derived=crypto.scryptSync(password,salt,64);
+    const expected=Buffer.from(hashHex,'hex');
+    return expected.length===derived.length && crypto.timingSafeEqual(expected,derived);
+  }catch{
+    return false;
+  }
+}
+
+function loadUsers(){
+  try{
+    const raw=JSON.parse(fs.readFileSync(USERS_FILE,'utf8'));
+    return Array.isArray(raw) ? raw : [];
+  }catch{
+    return [];
+  }
+}
+let users=loadUsers();
+
+function saveUsers(){
+  try{
+    fs.mkdirSync(path.dirname(USERS_FILE),{recursive:true});
+    fs.writeFileSync(USERS_FILE,JSON.stringify(users,null,2));
+  }catch(err){
+    console.error('Users save failed:',err.message);
+  }
+}
+
+function publicUser(user){
+  if(!user) return null;
+  return {
+    username:user.username,
+    icon:user.icon,
+    bestScore:Number(user.bestScore)||0,
+    totalScore:Number(user.totalScore)||0,
+    gamesPlayed:Number(user.gamesPlayed)||0,
+    wins:Number(user.wins)||0,
+    createdAt:user.createdAt
+  };
+}
+
+function validateUsername(username){
+  if(username.length<3 || username.length>20) return 'Username-ul trebuie să aibă între 3 și 20 de caractere.';
+  if(!/^\p{L}[\p{L}\p{N}_]*$/u.test(username)) return 'Folosește doar litere, cifre și underscore; primul caracter trebuie să fie literă.';
+  return null;
+}
+
+function authenticatedUser(socket){
+  const username=socket.data.authUsername;
+  return username ? users.find(u=>u.username===username) || null : null;
+}
+
+function issueSession(user){
+  const token=crypto.randomBytes(32).toString('hex');
+  sessions.set(token,user.username);
+  return token;
+}
+
+function attachSession(socket,token){
+  const username=sessions.get(String(token||''));
+  const user=username ? users.find(u=>u.username===username) : null;
+  if(!user) return null;
+  socket.data.authUsername=user.username;
+  socket.data.authToken=String(token);
+  return user;
+}
+
+function recordGameStats(room){
+  if(room.statsRecorded) return;
+  room.statsRecorded=true;
+  const players=[...room.players.values()];
+  if(!players.length) return;
+  const highest=Math.max(...players.map(p=>p.score));
+  let changed=false;
+  for(const player of players){
+    if(!player.username) continue;
+    const user=users.find(u=>u.username===player.username);
+    if(!user) continue;
+    user.gamesPlayed=(Number(user.gamesPlayed)||0)+1;
+    user.totalScore=(Number(user.totalScore)||0)+player.score;
+    user.bestScore=Math.max(Number(user.bestScore)||0,player.score);
+    if(player.score===highest) user.wins=(Number(user.wins)||0)+1;
+    changed=true;
+  }
+  if(changed) saveUsers();
+}
+
+
 const STATS_FILE = path.join(__dirname, 'data', 'stats.json');
 const DEFAULT_STATS = { totalPlayers: 0, totalRounds: 0, totalGames: 0 };
 
@@ -174,7 +281,7 @@ function serializeRoom(room) {
     status: room.status,
     hostId: room.hostId,
     categories: room.categories,
-    players: [...room.players.values()].map(p => ({ id: p.id, nickname: p.nickname, score: p.score, ready: p.ready })),
+    players: [...room.players.values()].map(p => ({ id: p.id, nickname: p.nickname, icon: p.icon || null, score: p.score, ready: p.ready, registered: Boolean(p.username) })),
     deadline: room.deadline || null,
     stoppedBy: room.stoppedBy || null,
     roundResults: room.roundResults || [],
@@ -224,7 +331,14 @@ function advanceAfterResults(room) {
 
   if (room.currentRound >= room.rounds) {
     room.status = 'finished';
+    recordGameStats(room);
     broadcastRoom(room);
+    for(const p of room.players.values()){
+      if(p.username){
+        const u=users.find(x=>x.username===p.username);
+        if(u) io.to(p.id).emit('auth:user',publicUser(u));
+      }
+    }
     return;
   }
 
@@ -242,6 +356,7 @@ function endRound(room) {
     const values = players.map(p => ({
       playerId:p.id,
       nickname:p.nickname,
+      icon:p.icon || null,
       value:(p.answers?.[cat.key] || '').trim()
     }));
     const normalized = values.map(v => normalizeAnswer(v.value));
@@ -316,8 +431,67 @@ io.on('connection', socket => {
 
   socket.on('rooms:list', () => socket.emit('rooms:public', publicRooms()));
 
+  socket.on('auth:restore', (token, ack = () => {}) => {
+    const user=attachSession(socket,token);
+    ack(user ? {ok:true,user:publicUser(user)} : {ok:false});
+  });
+
+  socket.on('auth:register', async (payload, ack = () => {}) => {
+    const username=String(payload?.username || '').trim();
+    const password=String(payload?.password || '');
+    const icon=String(payload?.icon || '');
+    const nameError=validateUsername(username);
+    if(nameError) return ack({ok:false,error:nameError});
+    if(password.length<4 || password.length>72) return ack({ok:false,error:'Parola trebuie să aibă între 4 și 72 de caractere.'});
+    if(users.some(u=>u.username===username)) return ack({ok:false,error:'Acest username există deja. Username-urile sunt case sensitive.'});
+    if(!USER_ICONS.has(icon)) return ack({ok:false,error:'Alege o iconiță din listă.'});
+    try{
+      const passwordHash=hashPassword(password);
+      const user={
+        username,passwordHash,icon,
+        bestScore:0,totalScore:0,gamesPlayed:0,wins:0,
+        createdAt:new Date().toISOString()
+      };
+      users.push(user);
+      saveUsers();
+      const token=issueSession(user);
+      socket.data.authUsername=user.username;
+      socket.data.authToken=token;
+      ack({ok:true,token,user:publicUser(user)});
+    }catch(err){
+      console.error(err);
+      ack({ok:false,error:'Nu am putut crea contul.'});
+    }
+  });
+
+  socket.on('auth:login', async (payload, ack = () => {}) => {
+    const username=String(payload?.username || '').trim();
+    const password=String(payload?.password || '');
+    const user=users.find(u=>u.username===username);
+    if(!user) return ack({ok:false,error:'Username sau parolă incorectă.'});
+    try{
+      const ok=verifyPassword(password,user.passwordHash);
+      if(!ok) return ack({ok:false,error:'Username sau parolă incorectă.'});
+      const token=issueSession(user);
+      socket.data.authUsername=user.username;
+      socket.data.authToken=token;
+      ack({ok:true,token,user:publicUser(user)});
+    }catch{
+      ack({ok:false,error:'Autentificarea a eșuat.'});
+    }
+  });
+
+  socket.on('auth:logout', (ack = () => {}) => {
+    if(socket.data.authToken) sessions.delete(socket.data.authToken);
+    socket.data.authUsername=null;
+    socket.data.authToken=null;
+    ack({ok:true});
+  });
+
+
   socket.on('room:create', (payload, ack = () => {}) => {
-    const nickname = String(payload.nickname || '').trim().slice(0, 20);
+    const authUser=authenticatedUser(socket);
+    const nickname = authUser ? authUser.username : String(payload.nickname || '').trim().slice(0, 20);
     if (!nickname) return ack({ ok: false, error: 'Alege un nickname.' });
 
     const roomCode = code();
@@ -330,6 +504,7 @@ io.on('connection', socket => {
       rounds: Math.max(1, Math.min(10, Number(payload.rounds) || 5)),
       categories: CATEGORIES,
       players: new Map(),
+      statsRecorded: false,
       hostId: socket.id,
       currentRound: 0,
       status: 'lobby',
@@ -347,7 +522,7 @@ io.on('connection', socket => {
       intermissionDeadline: null,
       intermissionTimer: null
     };
-    room.players.set(socket.id, { id: socket.id, nickname, score: 0, ready: true, answers: {} });
+    room.players.set(socket.id, { id: socket.id, nickname, username: authUser?.username || null, icon: authUser?.icon || null, score: 0, ready: true, answers: {} });
     rooms.set(roomCode, room);
     socket.join(roomCode);
     socket.data.roomCode = roomCode;
@@ -357,16 +532,17 @@ io.on('connection', socket => {
   });
 
   socket.on('room:join', (payload, ack = () => {}) => {
+    const authUser=authenticatedUser(socket);
     const roomCode = String(payload.code || '').trim().toUpperCase();
-    const nickname = String(payload.nickname || '').trim().slice(0, 20);
+    const nickname = authUser ? authUser.username : String(payload.nickname || '').trim().slice(0, 20);
     const room = rooms.get(roomCode);
     if (!room) return ack({ ok: false, error: 'Camera nu există.' });
     if (room.status === 'finished') return ack({ ok: false, error: 'Jocul din această cameră s-a terminat.' });
     if (room.players.size >= room.maxPlayers) return ack({ ok: false, error: 'Camera este plină.' });
     if (!nickname) return ack({ ok: false, error: 'Alege un nickname.' });
-    if ([...room.players.values()].some(p => p.nickname.toLowerCase() === nickname.toLowerCase())) return ack({ ok: false, error: 'Nickname deja folosit în cameră.' });
+    if ([...room.players.values()].some(p => p.nickname === nickname)) return ack({ ok: false, error: 'Nickname deja folosit în cameră.' });
 
-    room.players.set(socket.id, { id: socket.id, nickname, score: 0, ready: true, answers: {} });
+    room.players.set(socket.id, { id: socket.id, nickname, username: authUser?.username || null, icon: authUser?.icon || null, score: 0, ready: true, answers: {} });
     socket.join(roomCode);
     socket.data.roomCode = roomCode;
     bumpStat('totalPlayers');

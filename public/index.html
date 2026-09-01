@@ -36,7 +36,68 @@
           <li class="nav-item"><button class="nav-link nav-link-btn" type="button" data-bs-toggle="modal" data-bs-target="#howToModal">Cum se joacă</button></li>
           <li class="nav-item"><button class="nav-link nav-link-btn" type="button" data-bs-toggle="modal" data-bs-target="#rankingModal">Clasament</button></li>
           <li class="nav-item"><button class="nav-link nav-link-btn" type="button" data-bs-toggle="modal" data-bs-target="#aboutModal">Despre</button></li>
-          <li class="nav-item"><span class="player-pill">Jucător</span></li>
+          <li class="nav-item account-nav-item">
+  <button id="accountButton" class="player-pill account-trigger" type="button" aria-expanded="false">
+    <span id="accountButtonIcon" class="account-button-icon"><i class="fa-solid fa-user"></i></span>
+    <span id="accountButtonName">Guest</span>
+    <i class="fa-solid fa-chevron-down account-chevron"></i>
+  </button>
+  <div id="accountDropdown" class="account-dropdown" hidden>
+    <div id="accountGuestView">
+      <div class="account-dropdown-head">
+        <strong>Cont ȚOMAPAN</strong>
+        <small>Salvează scorurile și identitatea ta.</small>
+      </div>
+      <div id="accountChoice" class="account-choice">
+        <button id="showLoginForm" class="btn btn-primary w-100" type="button"><i class="fa-solid fa-right-to-bracket"></i> Autentificare</button>
+        <button id="showRegisterForm" class="btn btn-outline-light w-100" type="button"><i class="fa-solid fa-user-plus"></i> Creează cont</button>
+      </div>
+
+      <form id="loginAccountForm" class="account-form d-none" novalidate>
+        <button class="account-back" type="button" data-account-back><i class="fa-solid fa-arrow-left"></i> Înapoi</button>
+        <label class="form-label">Username</label>
+        <input name="username" class="form-control" maxlength="20" autocomplete="username" required>
+        <label class="form-label mt-2">Parolă</label>
+        <input name="password" type="password" class="form-control" maxlength="72" autocomplete="current-password" required>
+        <div id="loginAccountError" class="account-error d-none"></div>
+        <button class="btn btn-primary w-100 mt-3" type="submit">Intră în cont</button>
+      </form>
+
+      <form id="registerAccountForm" class="account-form d-none" novalidate>
+        <button class="account-back" type="button" data-account-back><i class="fa-solid fa-arrow-left"></i> Înapoi</button>
+        <label class="form-label">Username</label>
+        <input name="username" class="form-control" minlength="3" maxlength="20" autocomplete="username" required>
+        <small class="account-hint">3–20 caractere. Litere, cifre și _. Primul caracter trebuie să fie literă. Case sensitive.</small>
+        <label class="form-label mt-2">Parolă</label>
+        <input name="password" type="password" class="form-control" minlength="4" maxlength="72" autocomplete="new-password" required>
+        <label class="form-label mt-2">Confirmă parola</label>
+        <input name="confirmPassword" type="password" class="form-control" minlength="4" maxlength="72" autocomplete="new-password" required>
+        <div class="form-label mt-3 mb-2">Alege iconița</div>
+        <div id="accountIconPicker" class="account-icon-picker" role="radiogroup" aria-label="Alege iconița contului"></div>
+        <input type="hidden" name="icon" value="fa-solid fa-crown">
+        <div id="registerAccountError" class="account-error d-none"></div>
+        <button class="btn btn-primary w-100 mt-3" type="submit">Creează cont</button>
+      </form>
+    </div>
+
+    <div id="accountUserView" class="d-none">
+      <div class="account-profile">
+        <div id="accountProfileIcon" class="account-profile-icon"><i class="fa-solid fa-crown"></i></div>
+        <div>
+          <strong id="accountProfileName"></strong>
+          <small>Jucător înregistrat</small>
+        </div>
+      </div>
+      <div class="account-stats-grid">
+        <div><small>Highscore</small><strong id="profileBestScore">0</strong></div>
+        <div><small>Victorii</small><strong id="profileWins">0</strong></div>
+        <div><small>Jocuri</small><strong id="profileGames">0</strong></div>
+        <div><small>Puncte total</small><strong id="profileTotalScore">0</strong></div>
+      </div>
+      <button id="logoutAccount" class="btn btn-outline-light w-100 mt-3" type="button"><i class="fa-solid fa-arrow-right-from-bracket"></i> Logout</button>
+    </div>
+  </div>
+</li>
         </ul>
       </div>
     </div>

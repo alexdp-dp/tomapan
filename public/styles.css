@@ -1412,3 +1412,118 @@ body.game-active #roomView::before{
   line-height:1.55;
 }
 .rules-detail strong{color:#fff}
+
+
+/* ===== v19: local accounts ===== */
+.account-nav-item{position:relative}
+.account-trigger{
+  border:1px solid rgba(255,255,255,.16);
+  cursor:pointer;
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  background:rgba(16,10,34,.62);
+  color:#fff;
+}
+.account-trigger:hover{border-color:rgba(220,114,255,.5);box-shadow:0 0 18px rgba(220,114,255,.14)}
+.account-button-icon{
+  width:22px;height:22px;border-radius:7px;
+  display:grid;place-items:center;
+  color:#37e7ff;
+  background:rgba(55,231,255,.08);
+}
+.account-chevron{font-size:.62rem;opacity:.64;transition:transform .18s ease}
+.account-trigger[aria-expanded="true"] .account-chevron{transform:rotate(180deg)}
+.account-dropdown{
+  position:absolute;
+  z-index:1200;
+  right:0;
+  top:calc(100% + 12px);
+  width:min(350px,calc(100vw - 28px));
+  padding:16px;
+  border:1px solid rgba(255,255,255,.15);
+  border-radius:18px;
+  background:linear-gradient(145deg,rgba(13,8,31,.98),rgba(28,10,45,.97));
+  box-shadow:0 24px 70px rgba(0,0,0,.5),inset 0 1px 0 rgba(255,255,255,.05);
+  backdrop-filter:blur(22px);
+  -webkit-backdrop-filter:blur(22px);
+}
+.account-dropdown[hidden]{display:none!important}
+.account-dropdown::before{
+  content:"";
+  position:absolute;
+  right:24px;top:-7px;
+  width:13px;height:13px;
+  background:#170b28;
+  border-left:1px solid rgba(255,255,255,.15);
+  border-top:1px solid rgba(255,255,255,.15);
+  transform:rotate(45deg);
+}
+.account-dropdown-head{display:flex;flex-direction:column;gap:3px;margin-bottom:14px}
+.account-dropdown-head strong{font-family:'Barlow Condensed',sans-serif;font-size:1.08rem;letter-spacing:.04em}
+.account-dropdown-head small,.account-hint{color:rgba(255,255,255,.52);font-size:.72rem;line-height:1.35}
+.account-choice{display:grid;gap:9px}
+.account-form{position:relative}
+.account-form .form-label{font-size:.76rem;color:rgba(255,255,255,.72);margin-bottom:5px}
+.account-back{
+  appearance:none;border:0;background:transparent;color:#b9b6c8;
+  padding:0;margin:0 0 13px;font-size:.75rem;
+}
+.account-back:hover{color:#fff}
+.account-error{
+  margin-top:10px;padding:8px 10px;border-radius:10px;
+  color:#ff8b9d;background:rgba(255,95,121,.09);
+  border:1px solid rgba(255,95,121,.25);font-size:.75rem;line-height:1.35;
+}
+.account-icon-picker{
+  display:grid;grid-template-columns:repeat(8,1fr);gap:6px;
+}
+.account-icon-option{
+  aspect-ratio:1;border-radius:9px;
+  border:1px solid rgba(255,255,255,.11);
+  background:rgba(255,255,255,.035);color:#d5d3e4;
+  display:grid;place-items:center;padding:0;
+  transition:.15s ease;
+}
+.account-icon-option:hover{color:#37e7ff;border-color:rgba(55,231,255,.4);transform:translateY(-1px)}
+.account-icon-option.selected{
+  color:#fff;border-color:#dc72ff;
+  background:rgba(220,114,255,.13);
+  box-shadow:0 0 14px rgba(220,114,255,.2);
+}
+.account-profile{display:flex;align-items:center;gap:12px;padding-bottom:14px;border-bottom:1px solid rgba(255,255,255,.08)}
+.account-profile-icon{
+  flex:0 0 auto;width:43px;height:43px;border-radius:13px;
+  display:grid;place-items:center;font-size:1.05rem;color:#37e7ff;
+  background:linear-gradient(145deg,rgba(55,231,255,.10),rgba(220,114,255,.11));
+  border:1px solid rgba(255,255,255,.12);
+}
+.account-profile>div:last-child{display:flex;flex-direction:column;min-width:0}
+.account-profile strong{font-size:.98rem;overflow:hidden;text-overflow:ellipsis}
+.account-profile small{color:rgba(255,255,255,.45);font-size:.68rem}
+.account-stats-grid{
+  display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-top:12px;
+}
+.account-stats-grid>div{
+  padding:10px;border-radius:11px;
+  background:rgba(255,255,255,.035);border:1px solid rgba(255,255,255,.07);
+}
+.account-stats-grid small{display:block;color:rgba(255,255,255,.46);font-size:.63rem;text-transform:uppercase;letter-spacing:.05em}
+.account-stats-grid strong{display:block;margin-top:3px;font-size:.98rem;color:#fff;font-variant-numeric:tabular-nums}
+.player-name-line{display:inline-flex;align-items:center;gap:6px}
+.player-name-icon{color:#ffd34f;font-size:.86em;filter:drop-shadow(0 0 5px rgba(255,211,79,.25))}
+.result-player-name{display:inline-flex;align-items:center;gap:5px}
+.avatar i{font-size:1rem;color:#37e7ff}
+.winner-name .player-name-icon{font-size:.8em;color:#ffd34f}
+
+@media(max-width:991.98px){
+  .account-nav-item{width:100%;padding-top:2px}
+  .account-trigger{width:100%;justify-content:flex-start}
+  .account-trigger .account-chevron{margin-left:auto}
+  .account-dropdown{position:fixed;left:14px;right:14px;top:auto;width:auto;margin-top:8px}
+  .account-dropdown::before{display:none}
+}
+@media(max-width:420px){
+  .account-icon-picker{grid-template-columns:repeat(8,1fr);gap:4px}
+  .account-icon-option{border-radius:7px;font-size:.78rem}
+}
