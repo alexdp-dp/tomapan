@@ -72,19 +72,16 @@ const OWNER_ACCOUNT = {
 
 function ensureOwnerAccount(){
   const existing=users.find(u=>u.username===OWNER_ACCOUNT.username);
-
   if(existing){
+    // Keep accumulated stats, but enforce the reserved owner identity/icon.
     existing.icon=OWNER_ACCOUNT.icon;
-
     existing.gamesPlayed=Math.max(Number(existing.gamesPlayed)||0,999);
     existing.totalScore=Math.max(Number(existing.totalScore)||0,240488);
     existing.wins=Math.max(Number(existing.wins)||0,321);
     existing.bestScore=Math.max(Number(existing.bestScore)||0,470);
-
     saveUsers();
     return;
   }
-
   users.push({
     ...OWNER_ACCOUNT,
     bestScore:470,
@@ -93,7 +90,6 @@ function ensureOwnerAccount(){
     wins:321,
     createdAt:new Date().toISOString()
   });
-
   saveUsers();
 }
 

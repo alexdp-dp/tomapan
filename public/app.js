@@ -902,6 +902,54 @@ $('#leaveRoom')?.addEventListener('click',requestLeaveRoom);
 $('#leaveRoomFinished')?.addEventListener('click',requestLeaveRoom);
 $('#confirmLeaveRoom')?.addEventListener('click',leaveRoom);
 
+
+const SOCIAL_SHARE_TEXT='Hai la ȚOMAPAN Multiplayer! Intră și joacă Țară, Oraș, Munte, Apă, Plantă, Animal, Nume cu noi.';
+
+function currentShareUrl(){
+  const url=new URL(window.location.href);
+  url.search='';
+  url.hash='';
+  return url.toString();
+}
+
+function popupShare(url){
+  window.open(url,'tomapan_share','popup=yes,width=720,height=650,noopener,noreferrer');
+}
+
+$('#shareFacebook')?.addEventListener('click',()=>{
+  const url=encodeURIComponent(currentShareUrl());
+  popupShare(`https://www.facebook.com/sharer/sharer.php?u=${url}`);
+});
+
+$('#shareWhatsApp')?.addEventListener('click',()=>{
+  const message=encodeURIComponent(`${SOCIAL_SHARE_TEXT} ${currentShareUrl()}`);
+  window.open(`https://wa.me/?text=${message}`,'_blank','noopener,noreferrer');
+});
+
+$('#shareInstagram')?.addEventListener('click',async()=>{
+  const shareData={
+    title:'ȚOMAPAN Multiplayer',
+    text:SOCIAL_SHARE_TEXT,
+    url:currentShareUrl()
+  };
+
+  if(navigator.share){
+    try{
+      await navigator.share(shareData);
+      return;
+    }catch(err){
+      if(err?.name==='AbortError') return;
+    }
+  }
+
+  try{
+    await copyText(`${SOCIAL_SHARE_TEXT} ${currentShareUrl()}`);
+    showSystemMessage('Linkul a fost copiat. Instagram nu oferă share direct din browser; deschide aplicația și lipește linkul în Story, mesaj sau bio.','Link copiat');
+  }catch{
+    showSystemMessage('Instagram nu oferă share direct din browser. Copiază adresa paginii și distribuie-o din aplicația Instagram.','Share Instagram');
+  }
+});
+
 window.addEventListener('DOMContentLoaded',()=>setTimeout(openInviteFromUrl,80));
 
 initAccountUi();
