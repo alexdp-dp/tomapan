@@ -59,6 +59,65 @@ const LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('').filter(l => !['Q','W','Y'
 const DRAW_DURATION_MS = 1800;
 const NEXT_ROUND_DELAY_MS = 15000;
 
+const DICTIONARY_DIR = path.join(__dirname, 'data', 'dictionaries');
+
+function normalizeAnswer(value){
+  return String(value || '')
+    .trim()
+    .toLocaleLowerCase('ro-RO')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g,'')
+    .replace(/[’']/g,"'")
+    .replace(/[‐‑–—]/g,'-')
+    .replace(/\s+/g,' ');
+}
+
+function loadDictionary(key){
+  try{
+    const values=JSON.parse(fs.readFileSync(path.join(DICTIONARY_DIR,`${key}.json`),'utf8'));
+    return new Set(values.map(normalizeAnswer).filter(Boolean));
+  }catch(err){
+    console.error(`Dictionary ${key} failed to load:`,err.message);
+    return new Set();
+  }
+}
+
+const DICTIONARIES = Object.fromEntries(CATEGORIES.map(cat=>[cat.key,loadDictionary(cat.key)]));
+
+function firstLetterMatches(value, letter){
+  const clean=normalizeAnswer(value);
+  const wanted=normalizeAnswer(letter);
+  return Boolean(clean) && clean[0]===wanted[0];
+}
+
+function validationStatus(categoryKey, value, letter){
+  const clean=normalizeAnswer(value);
+  if(!clean) return 'empty';
+  if(!firstLetterMatches(value,letter)) return 'invalid';
+  return DICTIONARIES[categoryKey]?.has(clean) ? 'valid' : 'unknown';
+}
+
+function voteDecision(answer){
+  const votes=Object.values(answer.votes || {});
+  if(!votes.length) return 'unknown';
+  const yes=votes.filter(v=>v==='yes').length;
+  const no=votes.filter(v=>v==='no').length;
+  if(yes>no) return 'valid';
+  if(no>yes) return 'invalid';
+  return 'unknown';
+}
+
+function applyVotePoints(room, answer){
+  if(answer.validationStatus!=='unknown') return;
+  const decision=voteDecision(answer);
+  const desired=decision==='invalid' ? 0 : answer.basePoints;
+  const delta=desired-answer.points;
+  if(!delta) return;
+  answer.points=desired;
+  const player=room.players.get(answer.playerId);
+  if(player) player.score+=delta;
+}
+
 function shuffledLetters() {
   const pool = [...LETTERS];
   for (let i = pool.length - 1; i > 0; i--) {
@@ -180,15 +239,27 @@ function endRound(room) {
 
   const players = [...room.players.values()];
   const results = room.categories.map(cat => {
-    const values = players.map(p => ({ playerId: p.id, nickname: p.nickname, value: (p.answers?.[cat.key] || '').trim() }));
-    const normalized = values.map(v => v.value.toLocaleLowerCase('ro-RO'));
+    const values = players.map(p => ({
+      playerId:p.id,
+      nickname:p.nickname,
+      value:(p.answers?.[cat.key] || '').trim()
+    }));
+    const normalized = values.map(v => normalizeAnswer(v.value));
 
     const scored = values.map((v, idx) => {
-      if (!v.value) return { ...v, points: 0 };
-      const startsCorrect = v.value[0]?.toLocaleUpperCase('ro-RO') === room.letter;
-      if (!startsCorrect) return { ...v, points: 0 };
-      const duplicates = normalized.filter(x => x && x === normalized[idx]).length;
-      return { ...v, points: duplicates > 1 ? 5 : 10 };
+      const status=validationStatus(cat.key,v.value,room.letter);
+      let basePoints=0;
+      if(status==='valid' || status==='unknown'){
+        const duplicates=normalized.filter(x=>x && x===normalized[idx]).length;
+        basePoints=duplicates>1 ? 5 : 10;
+      }
+      return {
+        ...v,
+        validationStatus:status,
+        basePoints,
+        points:basePoints,
+        votes:{}
+      };
     });
 
     scored.forEach(s => {
@@ -324,6 +395,33 @@ io.on('connection', socket => {
     if (room.status !== 'results') return ack({ ok: false, error: 'Runda următoare nu poate fi pornită acum.' });
     advanceAfterResults(room);
     ack({ ok: true });
+  });
+
+  socket.on('answer:validate', (payload, ack = () => {}) => {
+    const room=rooms.get(socket.data.roomCode);
+    const player=room?.players.get(socket.id);
+    if(!room || !player || room.status!=='playing') return ack({ok:false,status:'empty'});
+    const categoryKey=String(payload?.category || '');
+    if(!room.categories.some(c=>c.key===categoryKey)) return ack({ok:false,status:'empty'});
+    const value=String(payload?.value || '').slice(0,80);
+    ack({ok:true,status:validationStatus(categoryKey,value,room.letter)});
+  });
+
+  socket.on('game:vote', (payload, ack = () => {}) => {
+    const room=rooms.get(socket.data.roomCode);
+    if(!room || !room.players.has(socket.id) || room.status!=='results') return ack({ok:false});
+    const categoryKey=String(payload?.categoryKey || '');
+    const playerId=String(payload?.playerId || '');
+    const vote=payload?.vote==='yes' ? 'yes' : payload?.vote==='no' ? 'no' : null;
+    if(!vote) return ack({ok:false});
+    const category=room.roundResults.find(c=>c.key===categoryKey);
+    const answer=category?.answers.find(a=>a.playerId===playerId);
+    if(!answer || answer.validationStatus!=='unknown' || answer.playerId===socket.id) return ack({ok:false});
+    answer.votes=answer.votes || {};
+    answer.votes[socket.id]=vote;
+    applyVotePoints(room,answer);
+    broadcastRoom(room);
+    ack({ok:true});
   });
 
   socket.on('game:answers', answers => {

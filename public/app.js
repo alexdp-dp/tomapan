@@ -28,6 +28,13 @@ function showHome(){ homeView.classList.add('active'); roomView.classList.remove
 function initials(name){ return name.trim().slice(0,2).toUpperCase(); }
 const CATEGORY_ICONS={tara:'fa-solid fa-flag',oras:'fa-solid fa-city',munte:'fa-solid fa-mountain-sun',apa:'fa-solid fa-water',planta:'fa-solid fa-seedling',animal:'fa-solid fa-paw',nume:'fa-solid fa-user'};
 
+function validationIcon(status){
+  if(status==='valid') return '<span class="validation-state valid" title="Răspuns recunoscut"><i class="fa-solid fa-check"></i></span>';
+  if(status==='invalid') return '<span class="validation-state invalid" title="Răspuns invalid"><i class="fa-solid fa-xmark"></i></span>';
+  if(status==='unknown') return '<span class="validation-state unknown" title="Nu există în dicționar"><i class="fa-solid fa-question"></i></span>';
+  return '<span class="validation-state empty"></span>';
+}
+
 function roomInviteUrl(code){
   const url=new URL(window.location.href); url.search=''; url.hash=''; url.searchParams.set('room',code); return url.toString();
 }
@@ -531,8 +538,24 @@ function renderGame(room){
   if(form.dataset.round!=String(room.currentRound)){
     form.dataset.round=room.currentRound;
     lastAnswers={};
-    form.innerHTML=room.categories.map(c=>`<div class="col-md-6 col-lg-4"><div class="answer-card"><label class="form-label answer-label"><span class="answer-category-icon"><i class="${CATEGORY_ICONS[c.key]||'fa-solid fa-pen'}"></i></span><span>${esc(c.label)}</span></label><input class="form-control answer-input" data-key="${c.key}" autocomplete="off" placeholder="${room.letter}..."></div></div>`).join('');
-    document.querySelectorAll('.answer-input').forEach(inp=>inp.addEventListener('input',sendAnswers));
+    form.innerHTML=room.categories.map(c=>`<div class="col-md-6 col-lg-4"><div class="answer-card"><label class="form-label answer-label"><span class="answer-category-icon"><i class="${CATEGORY_ICONS[c.key]||'fa-solid fa-pen'}"></i></span><span>${esc(c.label)}</span></label><div class="answer-input-wrap"><input class="form-control answer-input" data-key="${c.key}" autocomplete="off" placeholder="${room.letter}..."><span class="answer-validation-slot" data-validation-for="${c.key}"></span></div></div></div>`).join('');
+    document.querySelectorAll('.answer-input').forEach(inp=>{
+      inp.addEventListener('input',()=>{
+        const slot=document.querySelector(`[data-validation-for="${inp.dataset.key}"]`);
+        if(slot) slot.innerHTML='';
+        sendAnswers();
+      });
+      inp.addEventListener('blur',()=>validateAnswerInput(inp));
+      inp.addEventListener('keydown',e=>{
+        if(e.key==='Enter'){
+          e.preventDefault();
+          inp.blur();
+          const inputs=[...document.querySelectorAll('.answer-input')];
+          const idx=inputs.indexOf(inp);
+          inputs[idx+1]?.focus();
+        }
+      });
+    });
     document.querySelector('.answer-input')?.focus();
   }
   startCountdown(room.deadline);
@@ -545,6 +568,21 @@ function sendAnswers(){
     document.querySelectorAll('.answer-input').forEach(i=>lastAnswers[i.dataset.key]=i.value);
     socket.emit('game:answers',lastAnswers);
   },100);
+}
+
+function validateAnswerInput(inp){
+  const value=inp.value.trim();
+  const slot=document.querySelector(`[data-validation-for="${inp.dataset.key}"]`);
+  if(!slot) return;
+  if(!value){ slot.innerHTML=''; return; }
+  socket.emit('answer:validate',{category:inp.dataset.key,value},res=>{
+    if(!res?.ok) return;
+    slot.innerHTML=validationIcon(res.status);
+    inp.classList.remove('answer-valid','answer-invalid','answer-unknown');
+    if(res.status==='valid') inp.classList.add('answer-valid');
+    if(res.status==='invalid') inp.classList.add('answer-invalid');
+    if(res.status==='unknown') inp.classList.add('answer-unknown');
+  });
 }
 
 $('#stopButton').addEventListener('click',()=>{ sendAnswers(); setTimeout(()=>socket.emit('game:stop'),130); });
@@ -563,7 +601,18 @@ function renderResults(room){
   clearInterval(countdownInterval);
   clearInterval(resultsCountdownInterval);
   $('#resultsRound').textContent=room.currentRound;
-  $('#roundResults').innerHTML=room.roundResults.map(cat=>`<div class="result-category"><div class="result-category-title"><span class="answer-category-icon"><i class="${CATEGORY_ICONS[cat.key]||'fa-solid fa-pen'}" aria-hidden="true"></i></span><span>${esc(cat.category)}</span></div><div class="result-grid">${cat.answers.map(a=>`<div class="result-answer"><div class="small text-secondary">${esc(a.nickname)}</div><div class="d-flex justify-content-between gap-2"><span class="text-truncate">${esc(a.value||'—')}</span><span class="points">+${a.points}</span></div></div>`).join('')}</div></div>`).join('');
+  $('#roundResults').innerHTML=room.roundResults.map(cat=>`<div class="result-category"><div class="result-category-title"><span class="answer-category-icon"><i class="${CATEGORY_ICONS[cat.key]||'fa-solid fa-pen'}" aria-hidden="true"></i></span><span>${esc(cat.category)}</span></div><div class="result-grid">${cat.answers.map(a=>{
+    const votes=Object.values(a.votes||{});
+    const yes=votes.filter(v=>v==='yes').length;
+    const no=votes.filter(v=>v==='no').length;
+    const myVote=(a.votes||{})[socket.id];
+    const voteStatus=a.validationStatus==='unknown' ? (yes>no?'valid':no>yes?'invalid':'unknown') : a.validationStatus;
+    const canVote=a.validationStatus==='unknown' && a.playerId!==socket.id && Boolean(a.value);
+    const ownerUnknown=a.validationStatus==='unknown' && a.playerId===socket.id && Boolean(a.value);
+    const voteUi=a.validationStatus==='unknown' && a.value ? `<div class="vote-row ${canVote?'vote-attention':''}"><span class="vote-question">${ownerUnknown?'Votul celorlalți:':'E corect?'}</span>${canVote?`<button class="vote-btn yes ${myVote==='yes'?'active':''}" data-vote="yes" data-category="${cat.key}" data-player="${a.playerId}" title="Corect"><i class="fa-solid fa-check"></i></button><button class="vote-btn no ${myVote==='no'?'active':''}" data-vote="no" data-category="${cat.key}" data-player="${a.playerId}" title="Greșit"><i class="fa-solid fa-xmark"></i></button>`:''}<span class="vote-count"><i class="fa-solid fa-check"></i> ${yes} · <i class="fa-solid fa-xmark"></i> ${no}</span></div>`:'';
+    return `<div class="result-answer"><div class="result-answer-head"><span class="small text-secondary">${esc(a.nickname)}</span>${validationIcon(voteStatus)}</div><div class="d-flex justify-content-between gap-2 align-items-center"><span class="text-truncate">${esc(a.value||'—')}</span><span class="points">+${a.points}</span></div>${voteUi}</div>`;
+  }).join('')}</div></div>`).join('');
+  document.querySelectorAll('.vote-btn').forEach(btn=>btn.addEventListener('click',()=>socket.emit('game:vote',{categoryKey:btn.dataset.category,playerId:btn.dataset.player,vote:btn.dataset.vote})));
   renderScoreboard($('#scoreboard'),room.players);
 
   const btn=$('#nextRound');

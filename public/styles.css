@@ -1350,3 +1350,65 @@ body.game-active #roomView::before{
   .global-stat small{display:block;font-size:.58rem;margin-bottom:4px}
   .global-stat strong{font-size:.92rem}
 }
+
+
+/* ===== v18: dictionary validation + optional voting ===== */
+.answer-input-wrap{position:relative}
+.answer-validation-slot{
+  position:absolute;
+  right:12px;
+  top:50%;
+  transform:translateY(-50%);
+  z-index:3;
+  pointer-events:none;
+}
+.answer-input{padding-right:45px}
+.validation-state{
+  width:24px;height:24px;border-radius:50%;
+  display:inline-grid;place-items:center;
+  font-size:.78rem;font-weight:900;
+  border:1px solid transparent;
+}
+.validation-state.valid{color:#42f3a8;background:rgba(66,243,168,.10);border-color:rgba(66,243,168,.38);box-shadow:0 0 12px rgba(66,243,168,.18)}
+.validation-state.invalid{color:#ff5f79;background:rgba(255,95,121,.10);border-color:rgba(255,95,121,.38);box-shadow:0 0 12px rgba(255,95,121,.18)}
+.validation-state.unknown{color:#ffd34f;background:rgba(255,211,79,.10);border-color:rgba(255,211,79,.38);box-shadow:0 0 12px rgba(255,211,79,.18)}
+.validation-state.empty{display:none}
+.answer-valid{border-color:rgba(66,243,168,.45)!important}
+.answer-invalid{border-color:rgba(255,95,121,.48)!important}
+.answer-unknown{border-color:rgba(255,211,79,.48)!important}
+.result-answer-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:4px}
+.result-answer-head .validation-state{width:20px;height:20px;font-size:.66rem}
+.vote-row{
+  display:flex;align-items:center;gap:7px;flex-wrap:wrap;
+  margin-top:9px;padding-top:8px;border-top:1px solid rgba(255,255,255,.07);
+}
+.vote-question{
+  font-size:.72rem;font-weight:800;color:#ffd34f;letter-spacing:.02em;
+}
+.vote-attention .vote-question{animation:votePulse 1.15s ease-in-out infinite}
+@keyframes votePulse{
+  0%,100%{opacity:.62;text-shadow:0 0 0 rgba(255,211,79,0)}
+  50%{opacity:1;text-shadow:0 0 12px rgba(255,211,79,.72)}
+}
+.vote-btn{
+  width:27px;height:27px;border-radius:8px;
+  display:grid;place-items:center;padding:0;
+  background:rgba(255,255,255,.04);
+  border:1px solid rgba(255,255,255,.15);
+  color:#d8d8e8;
+  transition:.16s ease;
+}
+.vote-btn.yes:hover,.vote-btn.yes.active{color:#42f3a8;border-color:rgba(66,243,168,.55);background:rgba(66,243,168,.10);box-shadow:0 0 12px rgba(66,243,168,.16)}
+.vote-btn.no:hover,.vote-btn.no.active{color:#ff5f79;border-color:rgba(255,95,121,.55);background:rgba(255,95,121,.10);box-shadow:0 0 12px rgba(255,95,121,.16)}
+.vote-count{font-size:.66rem;color:rgba(255,255,255,.48);margin-left:auto;white-space:nowrap}
+
+.rules-detail{
+  padding:16px 18px;
+  border:1px solid rgba(255,255,255,.10);
+  border-radius:14px;
+  background:rgba(255,255,255,.035);
+  color:rgba(255,255,255,.72);
+  font-size:.92rem;
+  line-height:1.55;
+}
+.rules-detail strong{color:#fff}
