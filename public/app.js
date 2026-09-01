@@ -6,6 +6,20 @@ let drawAnimationFrame = null;
 let resultsCountdownInterval = null;
 
 const $ = s => document.querySelector(s);
+const formatStat=n=>new Intl.NumberFormat('ro-RO').format(Number(n)||0);
+socket.on('stats:update',stats=>{
+  const values={
+    statPlayersOnline:stats.playersOnline,
+    statTotalPlayers:stats.totalPlayers,
+    statTotalRounds:stats.totalRounds,
+    statTotalGames:stats.totalGames
+  };
+  for(const [id,value] of Object.entries(values)){
+    const el=document.getElementById(id);
+    if(el) el.textContent=formatStat(value);
+  }
+});
+
 const homeView = $('#homeView');
 const roomView = $('#roomView');
 

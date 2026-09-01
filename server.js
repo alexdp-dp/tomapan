@@ -3,6 +3,7 @@ import http from 'http';
 import { Server } from 'socket.io';
 import crypto from 'crypto';
 import path from 'path';
+import fs from 'fs';
 import { fileURLToPath } from 'url';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -15,6 +16,36 @@ const io = new Server(server);
 app.use(express.static(path.join(__dirname, 'public')));
 
 const rooms = new Map();
+
+const STATS_FILE = path.join(__dirname, 'data', 'stats.json');
+const DEFAULT_STATS = { totalPlayers: 0, totalRounds: 0, totalGames: 0 };
+
+function loadStats(){
+  try { return { ...DEFAULT_STATS, ...JSON.parse(fs.readFileSync(STATS_FILE,'utf8')) }; }
+  catch { return { ...DEFAULT_STATS }; }
+}
+let siteStats = loadStats();
+
+function saveStats(){
+  try{
+    fs.mkdirSync(path.dirname(STATS_FILE),{recursive:true});
+    fs.writeFileSync(STATS_FILE,JSON.stringify(siteStats,null,2));
+  }catch(err){ console.error('Stats save failed:',err.message); }
+}
+function statsPayload(){
+  return {
+    playersOnline: io.engine.clientsCount,
+    totalPlayers: siteStats.totalPlayers,
+    totalRounds: siteStats.totalRounds,
+    totalGames: siteStats.totalGames
+  };
+}
+function broadcastStats(){ io.emit('stats:update',statsPayload()); }
+function bumpStat(key){
+  siteStats[key]=(siteStats[key]||0)+1;
+  saveStats();
+  broadcastStats();
+}
 const CATEGORIES = [
   { key: 'tara', label: 'Țară' },
   { key: 'oras', label: 'Oraș' },
@@ -24,9 +55,9 @@ const CATEGORIES = [
   { key: 'animal', label: 'Animal' },
   { key: 'nume', label: 'Nume' }
 ];
-const LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('').filter(l => !['Q','W','Y','X'].includes(l));
+const LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('').filter(l => !['Q','W','Y'].includes(l));
 const DRAW_DURATION_MS = 1800;
-const NEXT_ROUND_DELAY_MS = 10000;
+const NEXT_ROUND_DELAY_MS = 15000;
 
 function shuffledLetters() {
   const pool = [...LETTERS];
@@ -168,6 +199,7 @@ function endRound(room) {
   });
 
   room.roundResults = results;
+  bumpStat('totalRounds');
   room.deadline = null;
   room.intermissionDeadline = Date.now() + NEXT_ROUND_DELAY_MS;
   room.intermissionTimer = setTimeout(() => advanceAfterResults(room), NEXT_ROUND_DELAY_MS);
@@ -208,6 +240,8 @@ function startRound(room) {
 
 io.on('connection', socket => {
   socket.emit('rooms:public', publicRooms());
+  socket.emit('stats:update', statsPayload());
+  broadcastStats();
 
   socket.on('rooms:list', () => socket.emit('rooms:public', publicRooms()));
 
@@ -246,6 +280,7 @@ io.on('connection', socket => {
     rooms.set(roomCode, room);
     socket.join(roomCode);
     socket.data.roomCode = roomCode;
+    bumpStat('totalPlayers');
     ack({ ok: true, code: roomCode });
     broadcastRoom(room);
   });
@@ -263,6 +298,7 @@ io.on('connection', socket => {
     room.players.set(socket.id, { id: socket.id, nickname, score: 0, ready: true, answers: {} });
     socket.join(roomCode);
     socket.data.roomCode = roomCode;
+    bumpStat('totalPlayers');
     ack({ ok: true, code: roomCode });
     broadcastRoom(room);
   });
@@ -277,6 +313,7 @@ io.on('connection', socket => {
     if (!room || room.hostId !== socket.id) return ack({ ok: false, error: 'Doar host-ul poate porni jocul.' });
     if (room.players.size < 2) return ack({ ok: false, error: 'Ai nevoie de cel puțin 2 jucători.' });
     if (room.status !== 'lobby') return ack({ ok: false, error: 'Jocul este deja pornit.' });
+    bumpStat('totalGames');
     startRound(room);
     ack({ ok: true });
   });
@@ -309,6 +346,7 @@ io.on('connection', socket => {
 
   socket.on('disconnect', () => {
     removePlayerFromRoom(socket);
+    setTimeout(broadcastStats,0);
   });
 });
 
