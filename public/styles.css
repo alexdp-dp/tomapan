@@ -1687,3 +1687,51 @@ body.game-active #roomView::before{
     min-height:30px !important;
   }
 }
+
+
+/* ===== v22: owner seed + player card overflow fix ===== */
+.player-card{
+  min-width:0;
+  overflow:hidden;
+}
+
+.player-card>.min-w-0{
+  min-width:0 !important;
+  width:0;
+  flex:1 1 0 !important;
+  overflow:hidden;
+}
+
+.player-card .player-name-line{
+  display:flex !important;
+  align-items:center;
+  gap:6px;
+  width:100%;
+  min-width:0;
+  max-width:100%;
+  overflow:hidden;
+  white-space:nowrap;
+}
+
+.player-card .player-name-line>span{
+  display:block;
+  min-width:0;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+
+.player-card .player-name-line>.player-name-icon{
+  flex:0 0 auto;
+}
+
+.player-card .player-name-line>.badge{
+  flex:0 0 auto;
+  margin-left:3px;
+}
+
+@media(min-width:768px){
+  .players-grid{
+    grid-template-columns:repeat(auto-fill,minmax(260px,1fr));
+  }
+}

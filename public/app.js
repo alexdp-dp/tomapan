@@ -879,6 +879,10 @@ async function loadGlobalRanking(){
 }
 
 $('#rankingModal')?.addEventListener('show.bs.modal',loadGlobalRanking);
+document.querySelector('[data-bs-target="#rankingModal"]')?.addEventListener('click',()=>{
+  // Explicit refresh on each open; useful even if Bootstrap event timing changes.
+  setTimeout(loadGlobalRanking,0);
+});
 
 function renderScoreboard(el,players){
   const sorted=[...players].sort((a,b)=>b.score-a.score);

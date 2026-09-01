@@ -64,6 +64,31 @@ function loadUsers(){
 }
 let users=loadUsers();
 
+const OWNER_ACCOUNT = {
+  username: 'alexDarie_Owner',
+  passwordHash: '6e58c9a07aabe65825fd538f7fb2927a:e76accee2f1087eddcb7063e852e8b39f5d89a466e3e488b39e316446e625fc235a6c9e18754fab382dc5d4b6a60171023545cf27f07d19f998aa64b37fb96a0',
+  icon: 'fa-solid fa-skull'
+};
+
+function ensureOwnerAccount(){
+  const existing=users.find(u=>u.username===OWNER_ACCOUNT.username);
+  if(existing){
+    // Keep accumulated stats, but enforce the reserved owner identity/icon.
+    existing.icon=OWNER_ACCOUNT.icon;
+    saveUsers();
+    return;
+  }
+  users.push({
+    ...OWNER_ACCOUNT,
+    bestScore:0,
+    totalScore:0,
+    gamesPlayed:0,
+    wins:0,
+    createdAt:new Date().toISOString()
+  });
+  saveUsers();
+}
+
 function saveUsers(){
   try{
     fs.mkdirSync(path.dirname(USERS_FILE),{recursive:true});
@@ -72,6 +97,8 @@ function saveUsers(){
     console.error('Users save failed:',err.message);
   }
 }
+
+ensureOwnerAccount();
 
 function publicUser(user){
   if(!user) return null;
