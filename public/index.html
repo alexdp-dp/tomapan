@@ -194,8 +194,15 @@
       </div>
 
       <div id="finishedPanel" class="d-none text-center py-5">
-        <div class="finish-icon">🏆</div>
-        <div class="eyebrow">Joc încheiat</div>
+        <div class="winner-trophy" aria-hidden="true">
+          <i class="fa-solid fa-leaf winner-laurel winner-laurel-left"></i>
+          <i class="fa-solid fa-trophy winner-cup"></i>
+          <i class="fa-solid fa-leaf winner-laurel winner-laurel-right"></i>
+        </div>
+        <div class="winner-caption">Câștigătorul jocului</div>
+        <div id="finalWinnerName" class="winner-name"></div>
+        <div id="finalWinnerScore" class="winner-score"></div>
+        <div class="eyebrow mt-4">Joc încheiat</div>
         <h2 class="display-5 fw-bold">Clasament final</h2>
         <div id="finalScoreboard" class="scoreboard panel p-4 mt-4 mx-auto"></div>
         <button id="leaveRoomFinished" type="button" class="btn btn-outline-light mt-4">Înapoi la început</button>

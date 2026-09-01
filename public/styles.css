@@ -1209,3 +1209,64 @@ body.game-active #roomView::before{
 .answer-label{display:flex!important;align-items:center;gap:9px;margin-bottom:10px}
 .answer-category-icon{width:28px;height:28px;display:grid;place-items:center;flex:0 0 28px;border-radius:9px;color:#30e5ff;background:rgba(28,214,255,.09);border:1px solid rgba(48,229,255,.2);font-size:.82rem;text-shadow:0 0 10px rgba(48,229,255,.55)}
 @media(max-width:767px){.invite-tools{width:100%}.invite-tools .code-box{flex:1 1 100%}.invite-btn{flex:1 1 calc(50% - 4px)}}
+
+
+/* ===== v16: category icons in results + final winner trophy ===== */
+.result-category-title{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  font-weight:800;
+  letter-spacing:.01em;
+}
+.winner-trophy{
+  position:relative;
+  display:flex;
+  align-items:flex-end;
+  justify-content:center;
+  gap:8px;
+  min-height:118px;
+  margin:0 auto 12px;
+  color:#ffc83d;
+  filter:drop-shadow(0 0 14px rgba(255,185,28,.35));
+}
+.winner-cup{
+  font-size:6.4rem;
+  line-height:1;
+  background:linear-gradient(180deg,#fff2a3 0%,#ffd64c 30%,#f1a915 70%,#c77c00 100%);
+  -webkit-background-clip:text;
+  background-clip:text;
+  color:transparent;
+  text-shadow:0 3px 0 rgba(109,63,0,.25);
+}
+.winner-laurel{
+  font-size:3.5rem;
+  color:#f7bd2d;
+  opacity:.95;
+  margin-bottom:10px;
+}
+.winner-laurel-left{transform:rotate(-38deg) scaleX(-1)}
+.winner-laurel-right{transform:rotate(38deg)}
+.winner-caption{
+  color:var(--muted);
+  font-size:.9rem;
+  margin-top:4px;
+}
+.winner-name{
+  font-size:2.45rem;
+  font-weight:900;
+  line-height:1.05;
+  margin-top:4px;
+}
+.winner-score{
+  color:#39f7a7;
+  font-size:1.35rem;
+  font-weight:900;
+  margin-top:6px;
+  text-shadow:0 0 12px rgba(57,247,167,.26);
+}
+@media(max-width:575px){
+  .winner-cup{font-size:5rem}
+  .winner-laurel{font-size:2.8rem}
+  .winner-name{font-size:2rem}
+}

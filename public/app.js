@@ -459,7 +459,7 @@ function renderRoom(room){
   $('#roomName').textContent=room.name; $('#roomCode').textContent=room.code;
   $('#playerCount').textContent=`${room.players.length}/${room.maxPlayers}`;
   $('#playersList').innerHTML=room.players.map(p=>`<div class="player-card"><div class="avatar">${esc(initials(p.nickname))}</div><div class="min-w-0"><div class="fw-semibold text-truncate">${esc(p.nickname)} ${p.id===room.hostId?'<span class="badge text-bg-secondary">host</span>':''}</div><div class="small text-secondary">${p.score} puncte</div></div></div>`).join('');
-  $('#roomSettings').innerHTML=`<div><span class="text-secondary">Runde</span><strong>${room.rounds}</strong></div><div><span class="text-secondary">Durată</span><strong>${room.duration}s</strong></div><div><span class="text-secondary">Tip cameră</span><strong>${room.isPublic?'Publică':'Privată'}</strong></div><div><span class="text-secondary">Categorii</span><strong>${room.categories.length}</strong></div>`;
+  $('#roomSettings').innerHTML=`<div><span class="text-secondary">Runde</span><strong>${room.rounds}</strong></div><div><span class="text-secondary">Durată</span><strong>${room.duration}s</strong></div><div><span class="text-secondary">Tip cameră</span><strong>${room.isPublic?'Publică':'Privată'}</strong></div>`;
   const amHost = socket.id===room.hostId;
   $('#startGame').classList.toggle('d-none',!amHost);
   $('#waitingHost').classList.toggle('d-none',amHost);
@@ -549,7 +549,7 @@ function renderResults(room){
   clearInterval(countdownInterval);
   clearInterval(resultsCountdownInterval);
   $('#resultsRound').textContent=room.currentRound;
-  $('#roundResults').innerHTML=room.roundResults.map(cat=>`<div class="result-category"><div class="fw-bold">${esc(cat.category)}</div><div class="result-grid">${cat.answers.map(a=>`<div class="result-answer"><div class="small text-secondary">${esc(a.nickname)}</div><div class="d-flex justify-content-between gap-2"><span class="text-truncate">${esc(a.value||'—')}</span><span class="points">+${a.points}</span></div></div>`).join('')}</div></div>`).join('');
+  $('#roundResults').innerHTML=room.roundResults.map(cat=>`<div class="result-category"><div class="result-category-title"><span class="answer-category-icon"><i class="${CATEGORY_ICONS[cat.key]||'fa-solid fa-pen'}" aria-hidden="true"></i></span><span>${esc(cat.category)}</span></div><div class="result-grid">${cat.answers.map(a=>`<div class="result-answer"><div class="small text-secondary">${esc(a.nickname)}</div><div class="d-flex justify-content-between gap-2"><span class="text-truncate">${esc(a.value||'—')}</span><span class="points">+${a.points}</span></div></div>`).join('')}</div></div>`).join('');
   renderScoreboard($('#scoreboard'),room.players);
 
   const btn=$('#nextRound');
@@ -578,7 +578,15 @@ function renderScoreboard(el,players){
   const sorted=[...players].sort((a,b)=>b.score-a.score);
   el.innerHTML=sorted.map((p,i)=>`<div class="score-row"><div class="d-flex align-items-center gap-2"><span class="rank">#${i+1}</span><strong>${esc(p.nickname)}</strong></div><span>${p.score} pct</span></div>`).join('');
 }
-function renderFinished(room){ clearInterval(countdownInterval); clearInterval(resultsCountdownInterval); renderScoreboard($('#finalScoreboard'),room.players); }
+function renderFinished(room){
+  clearInterval(countdownInterval);
+  clearInterval(resultsCountdownInterval);
+  const sorted=[...room.players].sort((a,b)=>b.score-a.score);
+  const winner=sorted[0];
+  $('#finalWinnerName').textContent=winner?.nickname||'—';
+  $('#finalWinnerScore').textContent=winner?`${winner.score} puncte`:'';
+  renderScoreboard($('#finalScoreboard'),room.players);
+}
 
 $('#leaveRoom')?.addEventListener('click',requestLeaveRoom);
 $('#leaveRoomFinished')?.addEventListener('click',requestLeaveRoom);
