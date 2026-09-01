@@ -78,6 +78,8 @@ function ensureOwnerAccount(){
 
     existing.gamesPlayed=Math.max(Number(existing.gamesPlayed)||0,999);
     existing.totalScore=Math.max(Number(existing.totalScore)||0,240488);
+    existing.wins=Math.max(Number(existing.wins)||0,321);
+    existing.bestScore=Math.max(Number(existing.bestScore)||0,470);
 
     saveUsers();
     return;
@@ -85,10 +87,10 @@ function ensureOwnerAccount(){
 
   users.push({
     ...OWNER_ACCOUNT,
-    bestScore:0,
+    bestScore:470,
     totalScore:240488,
     gamesPlayed:999,
-    wins:0,
+    wins:321,
     createdAt:new Date().toISOString()
   });
 
