@@ -24,9 +24,9 @@ const CATEGORIES = [
   { key: 'animal', label: 'Animal' },
   { key: 'nume', label: 'Nume' }
 ];
-const LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('').filter(l => !['Q','W','Y'].includes(l));
+const LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('').filter(l => !['Q','W','Y','X'].includes(l));
 const DRAW_DURATION_MS = 1800;
-const NEXT_ROUND_DELAY_MS = 15000;
+const NEXT_ROUND_DELAY_MS = 10000;
 
 function shuffledLetters() {
   const pool = [...LETTERS];
