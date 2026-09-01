@@ -15,6 +15,15 @@ const io = new Server(server);
 
 app.use(express.static(path.join(__dirname, 'public')));
 
+app.get('/api/ranking', (req,res) => {
+  try{
+    res.json({ok:true,...rankingPayload()});
+  }catch(err){
+    console.error('Ranking endpoint failed:',err.message);
+    res.status(500).json({ok:false,error:'Clasamentul nu a putut fi încărcat.'});
+  }
+});
+
 const rooms = new Map();
 
 const USERS_FILE = path.join(__dirname, 'data', 'users.json');

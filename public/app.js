@@ -854,17 +854,28 @@ function renderGlobalRanking(data){
   }
 }
 
-function loadGlobalRanking(){
-  $('#rankingLoading')?.classList.remove('d-none');
+async function loadGlobalRanking(){
+  const loading=$('#rankingLoading');
+  loading?.classList.remove('d-none');
   $('#rankingEmpty')?.classList.add('d-none');
   $('#globalRanking')?.classList.add('d-none');
-  socket.emit('ranking:get',res=>{
-    if(!res?.ok){
-      if($('#rankingLoading')) $('#rankingLoading').innerHTML='<span>Clasamentul nu a putut fi încărcat.</span>';
-      return;
-    }
-    renderGlobalRanking(res);
-  });
+  if(loading) loading.innerHTML='<i class="fa-solid fa-spinner fa-spin"></i><span>Se încarcă clasamentul...</span>';
+
+  try{
+    const response=await fetch('/api/ranking',{cache:'no-store'});
+    const data=await response.json();
+    if(!response.ok || !data?.ok) throw new Error(data?.error||'ranking_http_error');
+    renderGlobalRanking(data);
+  }catch(err){
+    // fallback for a server/client deploy that momentarily gets out of sync
+    socket.timeout(2500).emit('ranking:get',(socketErr,res)=>{
+      if(!socketErr && res?.ok){
+        renderGlobalRanking(res);
+        return;
+      }
+      if(loading) loading.innerHTML='<i class="fa-solid fa-triangle-exclamation"></i><span>Clasamentul nu a putut fi încărcat. Reîncearcă.</span>';
+    });
+  }
 }
 
 $('#rankingModal')?.addEventListener('show.bs.modal',loadGlobalRanking);
